@@ -21,6 +21,11 @@ public class LenticularMaze : MonoBehaviour
     public GameObject[] VerticalWalls;
     public Material[] WallMaterials;
 
+    public Transform You;
+    public GameObject[] Goals;
+
+    public KMSelectable[] Arrows;
+
     public class SquareInfo
     {
         public int X;
@@ -37,9 +42,20 @@ public class LenticularMaze : MonoBehaviour
     private SquareInfo[] _grid;
     private const int _size = 6;
 
+    int yourPosition = -1;
+    int[] goalPositions = new int[] { -1, -1, -1 };
+    bool[] discovered = new bool[] { false, false, false };
+    string[] coords = "A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2,A3,B3,C3,D3,E3,F3,A4,B4,C4,D4,E4,F4,A5,B5,C5,D5,E5,F5,A6,B6,C6,D6,E6,F6".Split(',');
+    string[] dirs = "up,right,down,left".Split(',');
+
     private void Awake()
     {
         ModuleId = ModuleIdCounter++;
+
+        for (int a = 0; a < 4; a++) {
+            int ax = a; //this is so incredibly dumb
+            Arrows[a].OnInteract += delegate { ArrowPress(ax); return false; };
+        }
     }
 
     private void Start()
@@ -107,8 +123,69 @@ public class LenticularMaze : MonoBehaviour
         }
 
         ApplyWallMaterials();
+
+        yourPosition = Rnd.Range(0, 36);
+        reroll:
+        for (int g = 0; g < 3; g++)
+        {
+            goalPositions[g] = Rnd.Range(0, 36);
+            if (goalPositions[g] == yourPosition) { goto reroll; }
+        }
+        if (goalPositions[0] == goalPositions[1] || goalPositions[0] == goalPositions[2] || goalPositions[1] == goalPositions[2]) { goto reroll; }
+
+        Debug.LogFormat("[Lenticular Maze #{0} You are at {1}, you need to make it to {2}, {3}, and {4}.", ModuleId, coords[yourPosition], coords[goalPositions[0]], coords[goalPositions[1]], coords[goalPositions[2]] );
+
+        PlaceObjectHere(You, yourPosition);
+        for (int g = 0; g < 3; g++)
+        {
+            PlaceObjectHere(Goals[g].transform, goalPositions[g]);
+        }
     }
 
+    void ArrowPress(int d)
+    {
+        if (ModuleSolved) { return; }
+        
+        if (_grid[yourPosition].Connections[d])
+        {
+            switch (d)
+            {
+                case 0: yourPosition -= 6; break;
+                case 1: yourPosition++; break;
+                case 2: yourPosition += 6; break;
+                case 3: yourPosition--; break;
+            }
+            PlaceObjectHere(You, yourPosition);
+
+            if (goalPositions.Contains(yourPosition))
+            {
+                int goalIx = Array.IndexOf(goalPositions, yourPosition);
+                if (!discovered[goalIx])
+                {
+                    discovered[goalIx] = true;
+                    Goals[goalIx].SetActive(false);
+                    Debug.LogFormat("[Lenticular Maze #{0} You made it to the goal at {1}.", ModuleId, coords[goalPositions[goalIx]]);
+                }
+                if (!discovered.Contains(false))
+                {
+                    Module.HandlePass();
+                    ModuleSolved = true;
+                    Debug.LogFormat("[Lenticular Maze #{0} Made it to all three goals, module solved.", ModuleId);
+                }
+            }
+        } else
+        {
+            Module.HandleStrike();
+            Debug.LogFormat("[Lenticular Maze #{0} Can't move {1} from {2}. Strike!", ModuleId, dirs[d], coords[yourPosition]);
+        }
+    }
+
+    void PlaceObjectHere(Transform go, int p)
+    {
+        int px = p % 6;
+        int py = p / 6;
+        go.localPosition = new Vector3(-0.06f + 0.02f * px, 0.0167f, 0.04f - 0.02f * py);
+    }
 
     private void ApplyWallMaterials()
     {
