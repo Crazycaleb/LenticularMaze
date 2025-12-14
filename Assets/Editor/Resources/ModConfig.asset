@@ -11,10 +11,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 615501dbe4f3fe94fbf4b564abb10237, type: 3}
   m_Name: ModConfig
   m_EditorClassIdentifier: 
-  id: 
-  title: 
-  author: Crazycaleb
-  description: 
-  version: 
+  id: LenticularMaze
+  title: Lenticular Maze
+  author: Crazycaleb, Blananas2, Quinn Wuest
+  description: 'Collect 3 purple squares in a maze where the status of the walls can
+    be determined by rotating the bomb.
+
+
+    Module made for Shotoff Cool for KTaNE Secret Santa Season 2
+
+
+    Modeling done by Crazycaleb and Quinn Wuest
+
+    Programming done by Blananas2 and Quinn Wuest
+
+
+    Manual coming soon'
+  version: 1.0
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: 6e0cfa00e30f4334fbd3dffb2ad0b61c, type: 3}

@@ -148,6 +148,7 @@ public class LenticularMaze : MonoBehaviour
         
         if (_grid[yourPosition].Connections[d])
         {
+            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, Arrows[d].transform);
             switch (d)
             {
                 case 0: yourPosition -= 6; break;
@@ -164,6 +165,7 @@ public class LenticularMaze : MonoBehaviour
                 {
                     discovered[goalIx] = true;
                     Goals[goalIx].SetActive(false);
+                    Audio.PlaySoundAtTransform("collect", transform);
                     Debug.LogFormat("[Lenticular Maze #{0} You made it to the goal at {1}.", ModuleId, coords[goalPositions[goalIx]]);
                 }
                 if (!discovered.Contains(false))

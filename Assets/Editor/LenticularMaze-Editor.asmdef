@@ -1,0 +1,10 @@
+{
+  "name": "LenticularMaze-Editor",
+  "references": [
+    "LenticularMaze"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": []
+}
