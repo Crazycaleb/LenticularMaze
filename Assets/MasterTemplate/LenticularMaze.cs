@@ -52,7 +52,8 @@ public class LenticularMaze : MonoBehaviour
     {
         ModuleId = ModuleIdCounter++;
 
-        for (int a = 0; a < 4; a++) {
+        for (int a = 0; a < 4; a++)
+        {
             int ax = a; //this is so incredibly dumb
             Arrows[a].OnInteract += delegate { ArrowPress(ax); return false; };
         }
@@ -133,7 +134,7 @@ public class LenticularMaze : MonoBehaviour
         }
         if (goalPositions[0] == goalPositions[1] || goalPositions[0] == goalPositions[2] || goalPositions[1] == goalPositions[2]) { goto reroll; }
 
-        Debug.LogFormat("[Lenticular Maze #{0} You are at {1}, you need to make it to {2}, {3}, and {4}.", ModuleId, coords[yourPosition], coords[goalPositions[0]], coords[goalPositions[1]], coords[goalPositions[2]] );
+        Debug.LogFormat("[Lenticular Maze #{0} You are at {1}, you need to make it to {2}, {3}, and {4}.", ModuleId, coords[yourPosition], coords[goalPositions[0]], coords[goalPositions[1]], coords[goalPositions[2]]);
 
         PlaceObjectHere(You, yourPosition);
         for (int g = 0; g < 3; g++)
@@ -145,7 +146,7 @@ public class LenticularMaze : MonoBehaviour
     void ArrowPress(int d)
     {
         if (ModuleSolved) { return; }
-        
+
         if (_grid[yourPosition].Connections[d])
         {
             Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, Arrows[d].transform);
@@ -175,7 +176,8 @@ public class LenticularMaze : MonoBehaviour
                     Debug.LogFormat("[Lenticular Maze #{0} Made it to all three goals, module solved.", ModuleId);
                 }
             }
-        } else
+        }
+        else
         {
             Module.HandleStrike();
             Debug.LogFormat("[Lenticular Maze #{0} Can't move {1} from {2}. Strike!", ModuleId, dirs[d], coords[yourPosition]);
@@ -196,7 +198,7 @@ public class LenticularMaze : MonoBehaviour
 
         for (int y = 0; y < _size; y++)
         {
-            for (int x = 0; x < _size -1; x++)
+            for (int x = 0; x < _size - 1; x++)
             {
                 int a = y * _size + x;
                 int b = a + 1;
@@ -230,16 +232,111 @@ public class LenticularMaze : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use !{0} to do something.";
+    private readonly string TwitchHelpMessage = @"!{0} move URDL [Move up, right, down, or left.]";
 #pragma warning restore 414
 
-    IEnumerator ProcessTwitchCommand(string Command)
+    IEnumerator ProcessTwitchCommand(string command)
     {
+        var m = Regex.Match(command, @"^\s*(?:(move|press|submit)\s+)?(?<moves>[urdl;, ]+)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        if (!m.Success)
+            yield break;
+
+        var moves = m.Groups["moves"].Value;
+        var list = new List<int>();
+        for (int i = 0; i < moves.Length; i++)
+        {
+            int ix = "urdl;, ".IndexOf(moves[i]);
+            if (ix == -1)
+                yield break;
+            if (ix > 3)
+                continue;
+            list.Add(ix);
+        }
         yield return null;
+        for (int i = 0; i <= list.Count; i++)
+        {
+            Arrows[i].OnInteract();
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+    struct QueueItem
+    {
+        public int Position;
+        public int Parent;
+        public int Direction;
+
+        public QueueItem(int pos, int parent, int dir)
+        {
+            Position = pos;
+            Parent = parent;
+            Direction = dir;
+        }
     }
 
     IEnumerator TwitchHandleForcedSolve()
     {
-        yield return null;
+        List<int> paths = new List<int>();
+        var goals = goalPositions.Where((i, ix) => !discovered[ix]).ToList();
+        int gc = goals.Count;
+        int curPos = yourPosition;
+        for (int i = 0; i < gc; i++)
+        {
+            var visited = new Dictionary<int, QueueItem>();
+            var q = new Queue<QueueItem>();
+            int goal = -1;
+            q.Enqueue(new QueueItem(curPos, -1, 0));
+            while (q.Count > 0)
+            {
+                var qi = q.Dequeue();
+                if (visited.ContainsKey(qi.Position))
+                    continue;
+                visited[qi.Position] = qi;
+
+                if (goals.Contains(qi.Position))
+                {
+                    goal = qi.Position;
+                    break;
+                }
+
+                for (int dir = 0; dir < 4; dir++)
+                    if (_grid[qi.Position].Connections[dir])
+                        q.Enqueue(new QueueItem(GetNumInDir(qi.Position, dir), qi.Position, dir));
+            }
+
+            var r = goal;
+            var path = new List<int>();
+            while (true)
+            {
+                var nr = visited[r];
+                if (nr.Parent == -1)
+                    break;
+                path.Add(nr.Direction);
+                r = nr.Parent;
+            }
+
+            path.Reverse();
+            paths.AddRange(path);
+            curPos = goal;
+            goals.Remove(goal);
+        }
+        for (int i = 0; i < paths.Count; i++)
+        {
+            Arrows[paths[i]].OnInteract();
+            yield return new WaitForSeconds(0.1f);
+        }
+        yield break;
+    }
+
+    private int GetNumInDir(int pos, int dir)
+    {
+        switch (dir)
+        {
+            case 0: return pos - 6;
+            case 1: return pos + 1;
+            case 2: return pos + 6;
+            case 3: return pos - 1;
+        }
+        throw new InvalidOperationException("Invalid dir");
     }
 }
